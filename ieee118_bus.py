@@ -16,14 +16,14 @@
    
 """Power flow data for IEEE 118 bus test case. 
 
-    code came: from https://rwl.github.io/PYPOWER/api/frames.html
+    code came from: https://rwl.github.io/PYPOWER/api/frames.html
 """ 
-  
-from numpy import array 
+
+from numpy import array, where, reshape, zeros, transpose, concatenate
 
 def keep_importent_info():
     
-        """
+    """
     Bus data that is kept: bus number (BUS_I), bus type (NUS_TYPE), PD, QD, VM, VA
     
     Branch data that is kept: starting node (fbus), ending node (tbus), r (resistance), x (reactance), b (Capacitance)
@@ -32,11 +32,68 @@ def keep_importent_info():
     
     ppc = case118()
     
-    ppc_import = {"version": '2'} 
-    ppc_import["bus"] = array([ppc["bus"][:,0],ppc["bus"][:,1],ppc["bus"][:,2],ppc["bus"][:,3],ppc["bus"][:,7],ppc["bus"][:,8]])
-    ppc_import["branch"] = array([ppc["branch"][:,0],ppc["branch"][:,1],ppc["branch"][:,2],ppc["branch"][:,3],ppc["branch"][:,4]])
+    Vfl = where(ppc["bus"][:,1] == 1)[0]
+    Vfg = where(ppc["bus"][:,1] == 2)[0]
+    Vf = ppc["bus"][:,0]
+    p = ppc["bus"][:,2]
+    q = ppc["bus"][:,3]
+    v = ppc["bus"][:,7]
+    th = ppc["bus"][:,8]
+    lines = transpose(array([ppc["branch"][:,0].astype(int) ,ppc["branch"][:,1].astype(int)]))
+    R = ppc["branch"][:,2]
+    X = ppc["branch"][:,3]
+    B = ppc["branch"][:,4]
+      
+    g, b = create_g_b_vector(R,X)
+        
+    #     g, b = create_g_b(R,X,B,Vf,lines)
     
-    return ppc_import
+    return Vfl, Vfg, Vf, p, q, v, th, lines, g, b, B
+
+def create_g_b_vector(R,X):
+    g = zeros(len(R))
+    b = zeros(len(R))
+    
+    for i in range(len(R)):
+        
+        g[i] =   R[i] / (R[i]**2 + X[i]**2)
+        b[i] = - X[i] / (R[i]**2 + X[i]**2)
+            
+    
+    return g, b
+
+# def create_g_b(R,X,B,Vf,lines):
+#     g = zeros(shape = (len(Vf),len(Vf)))
+#     b = zeros(shape = (len(Vf),len(Vf)))
+    
+#     # diagonal entries
+#     for i in range(len(Vf)):
+#         leftN = where(lines[:,0] == Vf[i])[0]
+#         rightN = where(lines[:,1] == Vf[i])[0]
+        
+#         Nodes = concatenate([leftN, rightN])
+        
+#         for j in range(len(Nodes)):
+#             b[i,i] += B[Nodes[j]]
+#             b[i,i] += - X[Nodes[j]] / ( R[Nodes[j]]**2 + X[Nodes[j]]**2 )
+            
+#             g[i,i] +=   R[Nodes[j]] / ( R[Nodes[j]]**2 + X[Nodes[j]]**2 )
+    
+#     # off diagonal entries
+#     for i in range(len(lines[:,1])):
+#         ii = lines[i,0] - 1
+#         jj = lines[i,1] - 1
+        
+#         gcom =   R[i] / (R[i]**2 + X[i]**2)
+#         bcom = - X[i] / (R[i]**2 + X[i]**2)
+#         g[ii,jj] = -gcom
+#         g[jj,ii] = -gcom
+#         b[ii,jj] = -bcom
+#         b[jj,ii] = -bcom
+            
+    
+#     return g, b
+    
    
 def case118(): 
     """Power flow data for IEEE 118 bus test case. 
